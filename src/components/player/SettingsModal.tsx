@@ -1,4 +1,6 @@
+import type { Element as SolidElement } from "solid-js"
 import type { PlayerController } from "../../features/player/controller"
+import type { PreferredSplitAspect, SplitCount } from "../../features/vr/config"
 import type { IconName } from "../ui/Icon"
 import { createSignal, For, onSettled, Show, untrack } from "solid-js"
 import appPackage from "../../../package.json"
@@ -18,6 +20,12 @@ const VIDEO_MATRIX_COLORS = ["#58bde2", "#5ed59a", "#efa557", "#9d74f7"]
 const VIDEO_MATRIX_ROWS = VIDEO_FRAME_RATE_OPTIONS
 const ABOUT_ACTION_CLASS = "flex items-center gap-1.5 rounded-full border px-2 py-1 font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent/40"
 const ABOUT_ACTION_IDLE_CLASS = "border-transparent bg-transparent text-white/42 hover:border-white/7 hover:bg-white/7 hover:text-white/72 focus-visible:border-white/7 focus-visible:bg-white/7 focus-visible:text-white/72"
+const SEGMENTED_CONTROL_CLASS = "grid h-8 rounded-full bg-black/24 p-1 shadow-[inset_0_1px_2px_rgba(0,0,0,.24),inset_0_0_0_1px_rgba(255,255,255,.025)]"
+const SEGMENT_BUTTON_CLASS = "grid h-6 place-items-center rounded-full border-0 px-2 outline-none transition-[background-color,color,box-shadow,transform] active:scale-[0.96] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/65"
+const SEGMENT_BUTTON_SELECTED_CLASS = "bg-accent text-[#062d36] shadow-[0_2px_8px_rgba(0,0,0,.28),inset_0_1px_0_rgba(255,255,255,.3)]"
+const SEGMENT_BUTTON_IDLE_CLASS = "bg-transparent text-white/46 hover:text-white/78"
+const SPLIT_COUNT_OPTIONS = [1, 2, 3] as const
+const SPLIT_ASPECT_OPTIONS = ["1:1", "9:16"] as const
 
 function SettingToggle(props: {
   title: string
@@ -60,6 +68,109 @@ function SettingToggle(props: {
   )
 }
 
+function SettingPicker(props: {
+  title: string
+  description: string
+  icon: IconName
+  columns: 2 | 3
+  children: SolidElement
+}) {
+  return (
+    <div class="grid grid-cols-[2rem_minmax(0,1fr)_auto] items-center gap-3 py-2 pr-2 pl-3">
+      <span class="grid h-8 w-8 place-items-center rounded-xl bg-white/8 text-white/78">
+        <Icon name={props.icon} class="h-4 w-4" />
+      </span>
+      <span class="min-w-0">
+        <span class="block truncate text-xs font-semibold text-white/92">{props.title}</span>
+        <span class="mt-0.5 block truncate text-[11px] leading-snug text-white/48">{props.description}</span>
+      </span>
+      <div
+        class={[SEGMENTED_CONTROL_CLASS, props.columns === 2 ? "grid-cols-2" : "grid-cols-3"]}
+        role="radiogroup"
+        aria-label={props.title}
+      >
+        {props.children}
+      </div>
+    </div>
+  )
+}
+
+function SplitCountPicker(props: { value: SplitCount, onChange: (value: SplitCount) => void }) {
+  return (
+    <SettingPicker
+      title={t("settings.portraitLayout")}
+      description={t("settings.portraitLayoutDescription")}
+      icon="columns"
+      columns={3}
+    >
+      <For each={SPLIT_COUNT_OPTIONS}>
+        {count => (
+          <button
+            type="button"
+            role="radio"
+            aria-checked={props.value === count ? "true" : "false"}
+            aria-label={t(`settings.splitCount.${count}` as const)}
+            title={t(`settings.splitCount.${count}` as const)}
+            class={[
+              SEGMENT_BUTTON_CLASS,
+              "min-w-7 text-[10px] font-semibold",
+              props.value === count
+                ? SEGMENT_BUTTON_SELECTED_CLASS
+                : SEGMENT_BUTTON_IDLE_CLASS,
+            ]}
+            onClick={() => props.onChange(count)}
+          >
+            {count}
+          </button>
+        )}
+      </For>
+    </SettingPicker>
+  )
+}
+
+function SplitAspectPicker(props: { value: PreferredSplitAspect, onChange: (value: PreferredSplitAspect) => void }) {
+  const optionLabel = (aspect: PreferredSplitAspect) => aspect === "1:1"
+    ? t("settings.splitAspect.square")
+    : t("settings.splitAspect.portrait")
+
+  return (
+    <SettingPicker
+      title={t("settings.preferredSplitAspect")}
+      description={t("settings.preferredSplitAspectDescription")}
+      icon="corners-in"
+      columns={2}
+    >
+      <For each={SPLIT_ASPECT_OPTIONS}>
+        {aspect => (
+          <button
+            type="button"
+            role="radio"
+            aria-checked={props.value === aspect ? "true" : "false"}
+            aria-label={optionLabel(aspect)}
+            title={`${optionLabel(aspect)} · ${aspect}`}
+            class={[
+              SEGMENT_BUTTON_CLASS,
+              "min-w-11",
+              props.value === aspect
+                ? SEGMENT_BUTTON_SELECTED_CLASS
+                : SEGMENT_BUTTON_IDLE_CLASS,
+            ]}
+            onClick={() => props.onChange(aspect)}
+          >
+            <span
+              aria-hidden="true"
+              class={[
+                "block border-2 border-current bg-current/10",
+                aspect === "1:1" ? "h-3.5 w-3.5 rounded-[3px]" : "h-4 w-[9px] rounded-[2px]",
+              ]}
+            />
+          </button>
+        )}
+      </For>
+    </SettingPicker>
+  )
+}
+
 export function SettingsModal(props: { controller: PlayerController, open: boolean, onOpenChange: (open: boolean) => void }) {
   const controller = untrack(() => props.controller)
   const { debug, display, frame, playback, server } = controller
@@ -68,7 +179,8 @@ export function SettingsModal(props: { controller: PlayerController, open: boole
     setQualityId,
     setRenderFrameRateId,
     setResumeFaceAutoCenterAfterViewChange,
-    setSplitScreen,
+    setSplitCount,
+    setPreferredSplitAspect,
     state,
   } = display
   const [narrowScreen, setNarrowScreen] = createSignal(window.matchMedia("(max-width: 639.9px)").matches)
@@ -126,14 +238,10 @@ export function SettingsModal(props: { controller: PlayerController, open: boole
               />
             </div>
             <div class="border-t border-white/7">
-              <SettingToggle
-                title={t("settings.portraitLayout")}
-                description={t("settings.portraitLayoutDescription")}
-                icon="columns"
-                pressed={state.splitScreen}
-                embedded
-                onCheckedChange={setSplitScreen}
-              />
+              <SplitCountPicker value={state.splitCount} onChange={setSplitCount} />
+            </div>
+            <div class="border-t border-white/7">
+              <SplitAspectPicker value={state.preferredSplitAspect} onChange={setPreferredSplitAspect} />
             </div>
             <Show when={server.enabled()}>
               <div class="border-t border-white/7">

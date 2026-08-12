@@ -49,6 +49,25 @@ describe("player state persistence", () => {
     expect(loadGlobalPreferences()).toEqual(preferences)
   })
 
+  it("migrates the previous split-screen preference", () => {
+    const {
+      preferredSplitAspect: _preferredSplitAspect,
+      splitCount: _splitCount,
+      ...legacyPreferences
+    } = DEFAULT_GLOBAL_PREFERENCES
+    localStorage.setItem("foursmith-vr:preferences", JSON.stringify({
+      ...legacyPreferences,
+      splitScreen: false,
+    }))
+    expect(loadGlobalPreferences()).toEqual({ ...DEFAULT_GLOBAL_PREFERENCES, splitCount: 1 })
+  })
+
+  it("defaults existing split-count preferences to the square ratio", () => {
+    const { preferredSplitAspect: _preferredSplitAspect, ...previousPreferences } = DEFAULT_GLOBAL_PREFERENCES
+    localStorage.setItem("foursmith-vr:preferences", JSON.stringify(previousPreferences))
+    expect(loadGlobalPreferences()).toEqual(DEFAULT_GLOBAL_PREFERENCES)
+  })
+
   it("rejects removed preference values", () => {
     localStorage.setItem("foursmith-vr:preferences", JSON.stringify({
       ...DEFAULT_GLOBAL_PREFERENCES,

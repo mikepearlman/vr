@@ -1,4 +1,6 @@
+import type { PreferredSplitAspect, SplitCount } from "../vr/config"
 import { fsvrMediaIdentity, fsvrMediaKey } from "../fsvr"
+import { DEFAULT_PREFERRED_SPLIT_ASPECT, DEFAULT_SPLIT_COUNT } from "../vr/config"
 
 export type RepeatMode = "off" | "folder" | "file"
 
@@ -7,7 +9,8 @@ export interface GlobalPreferences {
   playbackRate: number
   qualityId: number
   renderFrameRateId: number
-  splitScreen: boolean
+  splitCount: SplitCount
+  preferredSplitAspect: PreferredSplitAspect
   faceAutoCenter: boolean
   resumeFaceAutoCenterAfterViewChange: boolean
   autoResumePlayback: boolean
@@ -20,7 +23,8 @@ export const DEFAULT_GLOBAL_PREFERENCES: GlobalPreferences = {
   playbackRate: 1,
   qualityId: 2,
   renderFrameRateId: 3,
-  splitScreen: true,
+  splitCount: DEFAULT_SPLIT_COUNT,
+  preferredSplitAspect: DEFAULT_PREFERRED_SPLIT_ASPECT,
   faceAutoCenter: true,
   resumeFaceAutoCenterAfterViewChange: true,
   autoResumePlayback: false,
@@ -30,6 +34,11 @@ export const DEFAULT_GLOBAL_PREFERENCES: GlobalPreferences = {
 
 const GLOBAL_PREFERENCES_KEY = "foursmith-vr:preferences"
 const GLOBAL_PREFERENCE_KEYS = Object.keys(DEFAULT_GLOBAL_PREFERENCES)
+const PREVIOUS_GLOBAL_PREFERENCE_KEYS = GLOBAL_PREFERENCE_KEYS
+  .filter(key => key !== "preferredSplitAspect")
+const LEGACY_GLOBAL_PREFERENCE_KEYS = PREVIOUS_GLOBAL_PREFERENCE_KEYS
+  .filter(key => key !== "splitCount")
+  .concat("splitScreen")
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null
@@ -48,7 +57,23 @@ const isIntegerInRange = (value: unknown, min: number, max: number): value is nu
 const isRepeatMode = (value: unknown): value is RepeatMode =>
   value === "off" || value === "folder" || value === "file"
 
+const migrateLegacyGlobalPreferences = (value: unknown): unknown => {
+  if (isRecord(value) && hasExactKeys(value, PREVIOUS_GLOBAL_PREFERENCE_KEYS)) {
+    return { ...value, preferredSplitAspect: DEFAULT_PREFERRED_SPLIT_ASPECT }
+  }
+  if (!isRecord(value) || !hasExactKeys(value, LEGACY_GLOBAL_PREFERENCE_KEYS) || typeof value.splitScreen !== "boolean") {
+    return value
+  }
+  const { splitScreen, ...preferences } = value
+  return {
+    ...preferences,
+    splitCount: splitScreen ? 3 : 1,
+    preferredSplitAspect: DEFAULT_PREFERRED_SPLIT_ASPECT,
+  }
+}
+
 const validGlobalPreferences = (value: unknown): GlobalPreferences | undefined => {
+  value = migrateLegacyGlobalPreferences(value)
   if (
     !isRecord(value)
     || !hasExactKeys(value, GLOBAL_PREFERENCE_KEYS)
@@ -56,7 +81,8 @@ const validGlobalPreferences = (value: unknown): GlobalPreferences | undefined =
     || !isNumberInRange(value.playbackRate, 0.25, 4)
     || !isIntegerInRange(value.qualityId, 0, 3)
     || !isIntegerInRange(value.renderFrameRateId, 1, 3)
-    || typeof value.splitScreen !== "boolean"
+    || !isIntegerInRange(value.splitCount, 1, 3)
+    || (value.preferredSplitAspect !== "1:1" && value.preferredSplitAspect !== "9:16")
     || typeof value.faceAutoCenter !== "boolean"
     || typeof value.resumeFaceAutoCenterAfterViewChange !== "boolean"
     || typeof value.autoResumePlayback !== "boolean"
@@ -71,7 +97,8 @@ const validGlobalPreferences = (value: unknown): GlobalPreferences | undefined =
     playbackRate: value.playbackRate,
     qualityId: value.qualityId,
     renderFrameRateId: value.renderFrameRateId,
-    splitScreen: value.splitScreen,
+    splitCount: value.splitCount as SplitCount,
+    preferredSplitAspect: value.preferredSplitAspect,
     faceAutoCenter: value.faceAutoCenter,
     resumeFaceAutoCenterAfterViewChange: value.resumeFaceAutoCenterAfterViewChange,
     autoResumePlayback: value.autoResumePlayback,

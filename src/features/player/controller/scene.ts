@@ -141,6 +141,7 @@ export const createPlayerScene = (options: PlayerSceneOptions) => {
     loadingState,
     pauseFaceAutoCenter: () => scene?.pauseFaceAutoCenter(),
     projectionBoundaryWarning,
+    resize: () => scene?.resize(),
     reset,
     resetMedia: () => scene?.resetMedia(),
     resourcesReady: () => loadingState.resourcesReady,

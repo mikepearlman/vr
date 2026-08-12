@@ -80,32 +80,51 @@ describe("face sampling", () => {
 
 describe("render viewport layout", () => {
   it("uses one full viewport when split screen is disabled", () => {
-    expect(getRenderViewports(1920, 1080, false)).toEqual([
+    expect(getRenderViewports(1920, 1080, 1, "1:1")).toEqual([
       { x: 0, y: 0, width: 1920, height: 1080 },
     ])
   })
 
   it("does not split portrait or square output", () => {
-    expect(getRenderViewports(800, 1200, true)).toEqual([
+    expect(getRenderViewports(800, 1200, 3, "1:1")).toEqual([
       { x: 0, y: 0, width: 800, height: 1200 },
     ])
-    expect(getRenderViewports(800, 800, true)).toEqual([
+    expect(getRenderViewports(800, 800, 3, "1:1")).toEqual([
       { x: 0, y: 0, width: 800, height: 800 },
     ])
   })
 
-  it("chooses the largest landscape panel count that preserves a 9:16 minimum aspect", () => {
-    expect(getRenderViewports(899, 800, true)).toEqual([
-      { x: 0, y: 0, width: 899, height: 800 },
+  it("chooses the panel count whose views are closest to square", () => {
+    expect(getRenderViewports(1199, 800, 3, "1:1")).toEqual([
+      { x: 0, y: 0, width: 1199, height: 800 },
     ])
-    expect(getRenderViewports(900, 800, true)).toEqual([
-      { x: 0, y: 0, width: 450, height: 800 },
-      { x: 450, y: 0, width: 450, height: 800 },
+    expect(getRenderViewports(1200, 800, 3, "1:1")).toEqual([
+      { x: 0, y: 0, width: 600, height: 800 },
+      { x: 600, y: 0, width: 600, height: 800 },
+    ])
+    expect(getRenderViewports(1920, 1080, 3, "1:1")).toEqual([
+      { x: 0, y: 0, width: 960, height: 1080 },
+      { x: 960, y: 0, width: 960, height: 1080 },
+    ])
+  })
+
+  it("uses more portrait panels when 9:16 is preferred", () => {
+    expect(getRenderViewports(1920, 1080, 3, "9:16")).toEqual([
+      { x: 0, y: 0, width: 640, height: 1080 },
+      { x: 640, y: 0, width: 640, height: 1080 },
+      { x: 1280, y: 0, width: 640, height: 1080 },
+    ])
+  })
+
+  it("limits a wide layout to two panels when two-way split is selected", () => {
+    expect(getRenderViewports(3840, 1080, 2, "1:1")).toEqual([
+      { x: 0, y: 0, width: 1920, height: 1080 },
+      { x: 1920, y: 0, width: 1920, height: 1080 },
     ])
   })
 
   it("caps split screen at three equally sized panels", () => {
-    expect(getRenderViewports(3840, 1080, true)).toEqual([
+    expect(getRenderViewports(3840, 1080, 3, "1:1")).toEqual([
       { x: 0, y: 0, width: 1280, height: 1080 },
       { x: 1280, y: 0, width: 1280, height: 1080 },
       { x: 2560, y: 0, width: 1280, height: 1080 },

@@ -1,4 +1,4 @@
-import type { CameraView, ProjectionMode, ProjectionQuality } from "./config"
+import type { CameraView, PreferredSplitAspect, ProjectionMode, ProjectionQuality, SplitCount } from "./config"
 import type { FaceAutoCenterController } from "./tracking/face-auto-center-controller"
 import type { FaceMovementHint } from "./tracking/face-center-movement"
 import { DEFAULT_FOV, DEFAULT_ZOOM, PROJECTION_OPTIONS, QUALITY_OPTIONS } from "./config"
@@ -88,7 +88,8 @@ export interface VrSceneOptions {
   quality: ProjectionQuality
   frameRate: number
   hidden: boolean
-  splitScreen: boolean
+  splitCount: SplitCount
+  preferredSplitAspect: PreferredSplitAspect
   faceAutoCenter: boolean
   resumeFaceAutoCenterAfterViewChange: boolean
   debugPanelOpen: boolean
@@ -98,13 +99,14 @@ export interface VrSceneOptions {
 }
 
 export interface VrSceneController {
-  update: (nextOptions: Partial<Pick<VrSceneOptions, "projection" | "quality" | "frameRate" | "hidden" | "splitScreen" | "faceAutoCenter" | "resumeFaceAutoCenterAfterViewChange" | "debugPanelOpen">>) => void
+  update: (nextOptions: Partial<Pick<VrSceneOptions, "projection" | "quality" | "frameRate" | "hidden" | "splitCount" | "preferredSplitAspect" | "faceAutoCenter" | "resumeFaceAutoCenterAfterViewChange" | "debugPanelOpen">>) => void
   getOutputCanvas: () => HTMLCanvasElement
   setFrameCapture: (capture?: (canvas: HTMLCanvasElement) => void) => void
   adjustForward: (direction: number) => void
   pauseFaceAutoCenter: () => void
   resumeFaceAutoCenter: () => void
   clearMediaFrame: () => void
+  resize: () => void
   resetMedia: () => void
   destroy: () => void
 }
@@ -129,7 +131,8 @@ export const createVrScene = (initialOptions: VrSceneOptions): VrSceneController
     mount,
     projection: () => options.projection,
     quality: () => options.quality,
-    splitScreen: () => options.splitScreen,
+    splitCount: () => options.splitCount,
+    preferredSplitAspect: () => options.preferredSplitAspect,
     viewRef: options.viewRef,
   })
   const { camera } = renderRuntime
@@ -391,6 +394,7 @@ export const createVrScene = (initialOptions: VrSceneOptions): VrSceneController
     adjustForward: direction => manualInput.adjustForward(direction),
     pauseFaceAutoCenter: autoCenter.pauseForManualInput,
     resumeFaceAutoCenter: autoCenter.resume,
+    resize,
     clearMediaFrame() {
       stopScheduledRender()
       pendingVideoFrameAt = undefined
@@ -420,7 +424,7 @@ export const createVrScene = (initialOptions: VrSceneOptions): VrSceneController
       if (shouldRebuild) {
         rebuildProjection()
       }
-      if (nextOptions.splitScreen !== undefined) resize()
+      if (nextOptions.splitCount !== undefined || nextOptions.preferredSplitAspect !== undefined) resize()
       updateVisibility()
       if (options.hidden) {
         stopScheduledRender()

@@ -1,6 +1,7 @@
 import type { PerspectiveCamera } from "three"
-import type { CameraView, ProjectionMode, ProjectionQuality } from "../config"
+import type { CameraView, PreferredSplitAspect, ProjectionMode, ProjectionQuality, SplitCount } from "../config"
 import { MathUtils, Vector3 } from "three"
+import { getSplitAspectRatio } from "../config"
 import { createVrPlayerRenderer } from "./vr-player-renderer"
 
 type ValueOrGetter<T> = T | (() => T)
@@ -31,7 +32,8 @@ export interface VrRenderRuntimeOptions {
   mount: HTMLElement
   projection: ValueOrGetter<ProjectionMode>
   quality: ValueOrGetter<ProjectionQuality>
-  splitScreen: ValueOrGetter<boolean>
+  splitCount: ValueOrGetter<SplitCount>
+  preferredSplitAspect: ValueOrGetter<PreferredSplitAspect>
   viewRef: ReadonlyRefObject<CameraView> | (() => CameraView)
 }
 
@@ -40,8 +42,7 @@ export interface VrRenderRuntime {
   readonly canvas: HTMLCanvasElement
   setProjection: (projection?: ProjectionMode) => void
   setQuality: (quality?: ProjectionQuality) => void
-  setSplitScreen: (splitScreen: boolean) => void
-  resize: (splitScreen?: boolean) => void
+  resize: () => void
   applyCameraPose: (view?: CameraView) => void
   renderVisibleViewports: () => void
   captureViewportInference: (
@@ -64,13 +65,17 @@ export interface VrRenderRuntime {
   destroy: () => void
 }
 
-const MAX_SPLIT_SCREEN_PANELS = 3
-const MIN_SPLIT_SCREEN_ASPECT = 9 / 16
+export const getRenderViewports = (
+  width: number,
+  height: number,
+  splitCount: SplitCount,
+  preferredSplitAspect: PreferredSplitAspect,
+): RenderViewport[] => {
+  if (splitCount === 1 || width <= height) return [{ x: 0, y: 0, width, height }]
 
-export const getRenderViewports = (width: number, height: number, splitScreen: boolean): RenderViewport[] => {
-  if (!splitScreen || width <= height) return [{ x: 0, y: 0, width, height }]
-
-  const panelCount = Math.min(MAX_SPLIT_SCREEN_PANELS, Math.max(1, Math.floor(width / (height * MIN_SPLIT_SCREEN_ASPECT))))
+  const preferredAspect = getSplitAspectRatio(preferredSplitAspect)
+  const preferredPanelCount = Math.max(1, Math.round(width / (height * preferredAspect)))
+  const panelCount = Math.min(splitCount, preferredPanelCount)
   const panelWidth = width / panelCount
   return Array.from({ length: panelCount }, (_, index) => ({
     x: panelWidth * index,
@@ -124,8 +129,9 @@ const readValue = <T>(source: ValueOrGetter<T>): T =>
 export const createVrRenderRuntime = (options: VrRenderRuntimeOptions): VrRenderRuntime => {
   const initialWidth = Math.max(1, options.mount.clientWidth)
   const initialHeight = Math.max(1, options.mount.clientHeight)
-  const initialSplitScreen = readValue(options.splitScreen)
-  const initialViewport = getRenderViewports(initialWidth, initialHeight, initialSplitScreen)[0]
+  const initialSplitCount = readValue(options.splitCount)
+  const initialPreferredSplitAspect = readValue(options.preferredSplitAspect)
+  const initialViewport = getRenderViewports(initialWidth, initialHeight, initialSplitCount, initialPreferredSplitAspect)[0]
   const core = createVrPlayerRenderer({
     video: options.video,
     projection: readValue(options.projection),
@@ -138,12 +144,10 @@ export const createVrRenderRuntime = (options: VrRenderRuntimeOptions): VrRender
   const { camera, renderer, scene, texture } = core
   const canvas = renderer.domElement
   const cameraForward = new Vector3()
-  let splitScreenOverride = typeof options.splitScreen === "function"
-    ? undefined
-    : initialSplitScreen
   let disposed = false
 
-  const getSplitScreen = () => splitScreenOverride ?? readValue(options.splitScreen)
+  const getSplitCount = () => readValue(options.splitCount)
+  const getPreferredSplitAspect = () => readValue(options.preferredSplitAspect)
   const getView = () => typeof options.viewRef === "function"
     ? options.viewRef()
     : options.viewRef.current
@@ -152,10 +156,9 @@ export const createVrRenderRuntime = (options: VrRenderRuntimeOptions): VrRender
     height: Math.max(1, options.mount.clientHeight),
   })
   const getVisibleViewports = (width: number, height: number): RenderViewport[] =>
-    getRenderViewports(width, height, getSplitScreen())
+    getRenderViewports(width, height, getSplitCount(), getPreferredSplitAspect())
 
-  const resize = (splitScreen?: boolean) => {
-    if (splitScreen !== undefined) splitScreenOverride = splitScreen
+  const resize = () => {
     const { width, height } = getMountSize()
     const primaryViewport = getVisibleViewports(width, height)[0]
     core.setSize(width, height, primaryViewport.width / primaryViewport.height)
@@ -282,9 +285,6 @@ export const createVrRenderRuntime = (options: VrRenderRuntimeOptions): VrRender
     canvas,
     setProjection: projection => core.setProjection(projection ?? readValue(options.projection)),
     setQuality,
-    setSplitScreen: (splitScreen) => {
-      splitScreenOverride = splitScreen
-    },
     resize,
     applyCameraPose,
     renderVisibleViewports,

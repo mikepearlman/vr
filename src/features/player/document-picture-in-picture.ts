@@ -1,8 +1,12 @@
+import type { PreferredSplitAspect } from "../vr/config"
 import { createSignal } from "solid-js"
+import { getSplitAspectRatio } from "../vr/config"
 
-const PICTURE_IN_PICTURE_SIZE = {
-  width: 320,
-  height: Math.round(320 * 16 / 9),
+const PICTURE_IN_PICTURE_HEIGHT = 569
+
+export const getPictureInPictureSize = (aspect: PreferredSplitAspect) => {
+  const width = Math.round(PICTURE_IN_PICTURE_HEIGHT * getSplitAspectRatio(aspect))
+  return { width, height: PICTURE_IN_PICTURE_HEIGHT }
 }
 
 const copyDocumentStyles = (target: Document) => {
@@ -15,6 +19,8 @@ const copyDocumentStyles = (target: Document) => {
 
 export function createDocumentPictureInPicture(options: {
   getContent: () => HTMLElement
+  getPreferredAspect: () => PreferredSplitAspect
+  onLayoutChange?: () => void
   resourcesReady: () => boolean
 }) {
   const [active, setActive] = createSignal(false)
@@ -24,12 +30,24 @@ export function createDocumentPictureInPicture(options: {
   let opening = false
   let requestGeneration = 0
 
+  const resizeWindow = (target: Window, aspect: PreferredSplitAspect) => {
+    if (typeof target.resizeBy !== "function") return
+    const size = getPictureInPictureSize(aspect)
+    target.resizeBy(size.width - target.innerWidth, size.height - target.innerHeight)
+  }
+
+  const notifyLayoutChange = (target: Window) => {
+    options.onLayoutChange?.()
+    target.requestAnimationFrame(() => options.onLayoutChange?.())
+  }
+
   const restore = () => {
     if (restoreAnchor?.isConnected) restoreAnchor.replaceWith(options.getContent())
     restoreAnchor = undefined
     pipWindow = undefined
     opening = false
     setActive(false)
+    notifyLayoutChange(window)
   }
 
   const exit = () => {
@@ -49,7 +67,9 @@ export function createDocumentPictureInPicture(options: {
     opening = true
 
     try {
-      const nextWindow = await window.documentPictureInPicture!.requestWindow(PICTURE_IN_PICTURE_SIZE)
+      const nextWindow = await window.documentPictureInPicture!.requestWindow(
+        getPictureInPictureSize(options.getPreferredAspect()),
+      )
       if (generation !== requestGeneration) {
         nextWindow.close()
         return
@@ -65,6 +85,7 @@ export function createDocumentPictureInPicture(options: {
       }, { once: true })
       opening = false
       setActive(true)
+      notifyLayoutChange(nextWindow)
     } catch (error) {
       if (generation !== requestGeneration) return
       restore()
@@ -83,6 +104,11 @@ export function createDocumentPictureInPicture(options: {
   return {
     active,
     dispose: exit,
+    setPreferredAspect: (aspect: PreferredSplitAspect) => {
+      if (!pipWindow) return
+      resizeWindow(pipWindow, aspect)
+      notifyLayoutChange(pipWindow)
+    },
     supported,
     toggle,
   }

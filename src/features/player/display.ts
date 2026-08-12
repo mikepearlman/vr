@@ -1,8 +1,8 @@
 import type { ValueUpdate } from "../../lib/value-update"
-import type { CameraView } from "../vr/config"
+import type { CameraView, PreferredSplitAspect, SplitCount } from "../vr/config"
 import { createSignal, createStore } from "solid-js"
 import { resolveValueUpdate } from "../../lib/value-update"
-import { DEFAULT_FORWARD, QUALITY_OPTIONS } from "../vr/config"
+import { DEFAULT_FORWARD, DEFAULT_PREFERRED_SPLIT_ASPECT, DEFAULT_SPLIT_COUNT, QUALITY_OPTIONS } from "../vr/config"
 import { createDocumentPictureInPicture } from "./document-picture-in-picture"
 
 interface ViewRef { current: CameraView }
@@ -12,10 +12,12 @@ export function createDisplay(options: {
   resourcesReady: () => boolean
   viewRef: ViewRef
   onManualViewChange?: () => void
+  onPictureInPictureLayoutChange?: () => void
   initialState?: Partial<{
     qualityId: number
     renderFrameRateId: number
-    splitScreen: boolean
+    splitCount: SplitCount
+    preferredSplitAspect: PreferredSplitAspect
     faceAutoCenter: boolean
     resumeFaceAutoCenterAfterViewChange: boolean
   }>
@@ -24,7 +26,8 @@ export function createDisplay(options: {
     projectionId: 0,
     qualityId: options.initialState?.qualityId ?? 2,
     renderFrameRateId: options.initialState?.renderFrameRateId ?? 3,
-    splitScreen: options.initialState?.splitScreen ?? true,
+    splitCount: options.initialState?.splitCount ?? DEFAULT_SPLIT_COUNT,
+    preferredSplitAspect: options.initialState?.preferredSplitAspect ?? DEFAULT_PREFERRED_SPLIT_ASPECT,
     faceAutoCenter: options.initialState?.faceAutoCenter ?? true,
     resumeFaceAutoCenterAfterViewChange: options.initialState?.resumeFaceAutoCenterAfterViewChange ?? true,
   })
@@ -32,6 +35,8 @@ export function createDisplay(options: {
   let pictureInPictureContent!: HTMLElement
   const documentPictureInPicture = createDocumentPictureInPicture({
     getContent: () => pictureInPictureContent,
+    getPreferredAspect: () => state.preferredSplitAspect,
+    onLayoutChange: options.onPictureInPictureLayoutChange,
     resourcesReady: options.resourcesReady,
   })
 
@@ -50,7 +55,12 @@ export function createDisplay(options: {
     const next = resolveValueUpdate(state.renderFrameRateId, update)
     setValue("renderFrameRateId", Math.min(3, Math.max(1, Math.round(next))))
   }
-  const setSplitScreen = (update: ValueUpdate<boolean>) => setValue("splitScreen", update)
+  const setSplitCount = (update: ValueUpdate<SplitCount>) => setValue("splitCount", update)
+  const setPreferredSplitAspect = (update: ValueUpdate<PreferredSplitAspect>) => {
+    const next = resolveValueUpdate(state.preferredSplitAspect, update)
+    setValue("preferredSplitAspect", next)
+    documentPictureInPicture.setPreferredAspect(next)
+  }
   const setFaceAutoCenter = (update: ValueUpdate<boolean>) => setValue("faceAutoCenter", update)
   const setResumeFaceAutoCenterAfterViewChange = (update: ValueUpdate<boolean>) =>
     setValue("resumeFaceAutoCenterAfterViewChange", update)
@@ -104,7 +114,8 @@ export function createDisplay(options: {
     setProjectionId,
     setQualityId,
     setRenderFrameRateId,
-    setSplitScreen,
+    setSplitCount,
+    setPreferredSplitAspect,
     state,
     togglePictureInPicture: documentPictureInPicture.toggle,
     toggleFullscreen,
@@ -118,8 +129,9 @@ export function createDisplay(options: {
     projectionId: () => state.projectionId,
     qualityId: () => state.qualityId,
     renderFrameRateId: () => state.renderFrameRateId,
+    preferredSplitAspect: () => state.preferredSplitAspect,
     resumeFaceAutoCenterAfterViewChange: () => state.resumeFaceAutoCenterAfterViewChange,
-    splitScreen: () => state.splitScreen,
+    splitCount: () => state.splitCount,
     resetTransientView,
     restoreProjection,
     setPictureInPictureContent: (element: HTMLElement) => (pictureInPictureContent = element),
