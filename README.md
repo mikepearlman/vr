@@ -152,3 +152,7 @@ Foursmith VR is licensed under the [Mozilla Public License 2.0](LICENSE).
 
 Code by GPT-5.6 Sol.
 Taste by [ourongxing](https://github.com/ourongxing).
+
+## Native iPhone app
+
+The native iPhone app now lives in [mobile-VR](https://github.com/mikepearlman/mobile-VR).
