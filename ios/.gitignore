@@ -1,0 +1,7 @@
+build/
+simulator-build/
+*.xcuserstate
+xcuserdata/
+*.ipa
+*.xcarchive
+.DS_Store

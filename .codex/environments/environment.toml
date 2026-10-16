@@ -1,0 +1,7 @@
+version = 1
+name = "VR Player"
+
+[[actions]]
+name = "Run iPhone App"
+icon = "run"
+command = "./ios/scripts/build_and_run.sh"

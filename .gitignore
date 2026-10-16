@@ -51,3 +51,4 @@ server/store.sqlite
 !.dev.vars.example
 .env*
 !.env.example
+.vercel
