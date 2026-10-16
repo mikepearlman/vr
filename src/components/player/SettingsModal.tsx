@@ -1,6 +1,6 @@
 import type { Element as SolidElement } from "solid-js"
 import type { PlayerController } from "../../features/player/controller"
-import type { PreferredSplitAspect, SplitCount } from "../../features/vr/config"
+import type { PreferredSplitAspect } from "../../features/vr/config"
 import type { IconName } from "../ui/Icon"
 import { createSignal, For, onSettled, Show, untrack } from "solid-js"
 import appPackage from "../../../package.json"
@@ -24,7 +24,6 @@ const SEGMENTED_CONTROL_CLASS = "grid h-8 rounded-full bg-black/24 p-1 shadow-[i
 const SEGMENT_BUTTON_CLASS = "grid h-6 place-items-center rounded-full border-0 px-2 outline-none transition-[background-color,color,box-shadow,transform] active:scale-[0.96] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/65"
 const SEGMENT_BUTTON_SELECTED_CLASS = "bg-accent text-[#062d36] shadow-[0_2px_8px_rgba(0,0,0,.28),inset_0_1px_0_rgba(255,255,255,.3)]"
 const SEGMENT_BUTTON_IDLE_CLASS = "bg-transparent text-white/46 hover:text-white/78"
-const SPLIT_COUNT_OPTIONS = [1, 2, 3] as const
 const SPLIT_ASPECT_OPTIONS = ["1:1", "9:16"] as const
 
 function SettingToggle(props: {
@@ -95,39 +94,6 @@ function SettingPicker(props: {
   )
 }
 
-function SplitCountPicker(props: { value: SplitCount, onChange: (value: SplitCount) => void }) {
-  return (
-    <SettingPicker
-      title={t("settings.portraitLayout")}
-      description={t("settings.portraitLayoutDescription")}
-      icon="columns"
-      columns={3}
-    >
-      <For each={SPLIT_COUNT_OPTIONS}>
-        {count => (
-          <button
-            type="button"
-            role="radio"
-            aria-checked={props.value === count ? "true" : "false"}
-            aria-label={t(`settings.splitCount.${count}` as const)}
-            title={t(`settings.splitCount.${count}` as const)}
-            class={[
-              SEGMENT_BUTTON_CLASS,
-              "min-w-7 text-[10px] font-semibold",
-              props.value === count
-                ? SEGMENT_BUTTON_SELECTED_CLASS
-                : SEGMENT_BUTTON_IDLE_CLASS,
-            ]}
-            onClick={() => props.onChange(count)}
-          >
-            {count}
-          </button>
-        )}
-      </For>
-    </SettingPicker>
-  )
-}
-
 function SplitAspectPicker(props: { value: PreferredSplitAspect, onChange: (value: PreferredSplitAspect) => void }) {
   const optionLabel = (aspect: PreferredSplitAspect) => aspect === "1:1"
     ? t("settings.splitAspect.square")
@@ -179,7 +145,6 @@ export function SettingsModal(props: { controller: PlayerController, open: boole
     setQualityId,
     setRenderFrameRateId,
     setResumeFaceAutoCenterAfterViewChange,
-    setSplitCount,
     setPreferredSplitAspect,
     state,
   } = display
@@ -236,9 +201,6 @@ export function SettingsModal(props: { controller: PlayerController, open: boole
                   setRenderFrameRateId(frameRateIndex + 1)
                 }}
               />
-            </div>
-            <div class="border-t border-white/7">
-              <SplitCountPicker value={state.splitCount} onChange={setSplitCount} />
             </div>
             <div class="border-t border-white/7">
               <SplitAspectPicker value={state.preferredSplitAspect} onChange={setPreferredSplitAspect} />

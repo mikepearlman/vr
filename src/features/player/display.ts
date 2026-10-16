@@ -26,7 +26,8 @@ export function createDisplay(options: {
     projectionId: 0,
     qualityId: options.initialState?.qualityId ?? 2,
     renderFrameRateId: options.initialState?.renderFrameRateId ?? 3,
-    splitCount: options.initialState?.splitCount ?? DEFAULT_SPLIT_COUNT,
+    // Keep one full-width 2D view, including after rotation and preference restore.
+    splitCount: DEFAULT_SPLIT_COUNT,
     preferredSplitAspect: options.initialState?.preferredSplitAspect ?? DEFAULT_PREFERRED_SPLIT_ASPECT,
     faceAutoCenter: options.initialState?.faceAutoCenter ?? true,
     resumeFaceAutoCenterAfterViewChange: options.initialState?.resumeFaceAutoCenterAfterViewChange ?? true,
@@ -55,7 +56,6 @@ export function createDisplay(options: {
     const next = resolveValueUpdate(state.renderFrameRateId, update)
     setValue("renderFrameRateId", Math.min(3, Math.max(1, Math.round(next))))
   }
-  const setSplitCount = (update: ValueUpdate<SplitCount>) => setValue("splitCount", update)
   const setPreferredSplitAspect = (update: ValueUpdate<PreferredSplitAspect>) => {
     const next = resolveValueUpdate(state.preferredSplitAspect, update)
     setValue("preferredSplitAspect", next)
@@ -114,7 +114,6 @@ export function createDisplay(options: {
     setProjectionId,
     setQualityId,
     setRenderFrameRateId,
-    setSplitCount,
     setPreferredSplitAspect,
     state,
     togglePictureInPicture: documentPictureInPicture.toggle,

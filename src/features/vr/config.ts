@@ -24,7 +24,7 @@ export type ProjectionQuality = (typeof QUALITY_OPTIONS)[number]["component"]
 export type SplitCount = 1 | 2 | 3
 export type PreferredSplitAspect = "1:1" | "9:16"
 
-export const DEFAULT_SPLIT_COUNT: SplitCount = 2
+export const DEFAULT_SPLIT_COUNT: SplitCount = 1
 export const DEFAULT_PREFERRED_SPLIT_ASPECT: PreferredSplitAspect = "1:1"
 
 export const getSplitAspectRatio = (aspect: PreferredSplitAspect) => aspect === "1:1" ? 1 : 9 / 16
