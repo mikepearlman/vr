@@ -20,7 +20,7 @@ Use Xcode, XcodeGen, and the configured Apple development team. The app targets 
 ./ios/scripts/build_and_run.sh
 ```
 
-The script detects one paired iPhone, builds a Release version, signs it, installs it, and launches it. Set `VR_DEVICE_ID` when multiple iPhones appear. Apple requires Developer Mode for this development installation.
+The script detects one paired iPhone, builds a Release version, signs it, installs it, and launches it. Set `VR_DEVICE_ID` when multiple iPhones appear. Apple requires Developer Mode for this development installation. The script keeps one current app in `ios/dist/VRPlayer.app` and removes its build cache after installation.
 
 The generated `VRPlayer.xcodeproj` comes from `project.yml`. Regenerate it with `xcodegen generate --spec ios/project.yml` after changing the specification.
 
@@ -31,6 +31,8 @@ xcodebuild -project ios/VRPlayer.xcodeproj -scheme VRPlayer \
   -destination 'platform=iOS Simulator,name=VR Player iPhone 16 Pro' \
   -derivedDataPath ios/simulator-build CODE_SIGNING_ALLOWED=NO test
 ```
+
+The named simulator must exist before running that command. Remove temporary simulators and `ios/simulator-build` after testing.
 
 Unit tests cover eye coordinates, camera bounds, zoom limits, saved playback state, Plex response parsing, conversion safeguards, and URL encoding. The repository contains no automated UI tests.
 

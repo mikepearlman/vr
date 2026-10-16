@@ -19,4 +19,8 @@ xcodegen generate --spec project.yml
 xcodebuild -project VRPlayer.xcodeproj -scheme VRPlayer -configuration Release -destination "id=$VR_DEVICE_ID" -derivedDataPath build -allowProvisioningUpdates -allowProvisioningDeviceRegistration build
 APP="$PWD/build/Build/Products/Release-iphoneos/VRPlayer.app"
 xcrun devicectl device install app --device "$VR_DEVICE_ID" "$APP"
-xcrun devicectl device process launch --device "$VR_DEVICE_ID" com.mikepearlman.vrplayer.ios
+mkdir -p dist
+rm -rf dist/VRPlayer.app
+ditto "$APP" dist/VRPlayer.app
+rm -rf build
+xcrun devicectl device process launch --device "$VR_DEVICE_ID" --terminate-existing com.mikepearlman.vrplayer.ios
